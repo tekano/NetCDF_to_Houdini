@@ -1,17 +1,20 @@
 // assemble_velocity.vx
-// Run over: Points
-// Paste into an Attribute Wrangle after importing CSV via File SOP.
-// Assembles the separate vx/vy/vz float columns into a Houdini velocity vector.
+// Attribute Wrangle — run over: Points
+// Place immediately after Table Import / File SOP reading wind_points_NNNN.csv
+//
+// CSV columns: x, y, z, vx, vy, vz, speed, level_idx, height_agl
+//
+// NetCDF → Houdini axis swap (geographic → Y-up):
+//   NetCDF X (east)   → Houdini X
+//   NetCDF Y (north)  → Houdini Z
+//   NetCDF Z (height) → Houdini Y
 
-v@v = set(f@vx, f@vy, f@vz);
+@P = set(f@x, f@z, f@y);       // position
+v@vel = set(f@vx, f@vz, f@vy); // velocity (named 'vel' for display)
+v@v   = v@vel;                  // alias — FLIP/Pyro solvers expect 'v'
 
-// Optionally normalise for visualisation (e.g. arrow display)
-// v@v_norm = normalize(v@v);
+f@speed = length(v@vel);
 
-// Wind speed scalar — useful for colour ramp or CHOP driven effects
-f@speed = length(v@v);
-
-// Remap height AGL to a 0-1 range for shading
-// Adjust max_height to match your data (metres)
-float max_height = 1000.0;
-f@height_norm = clamp(f@height / max_height, 0.0, 1.0);
+// Normalised height 0-1 for colour ramp / masking
+float max_height = 1000.0;      // adjust to your data's max height_agl
+f@height_norm = clamp(f@height_agl / max_height, 0.0, 1.0);

@@ -1,0 +1,32 @@
+# ============================================================
+# netCDF-to-Houdini — full dependency list
+# Install everything in one go:
+#   python -m pip install -r requirements_full.txt
+# ============================================================
+
+# --- Core (required by all scripts) ---
+xarray>=2023.1          # nc_to_csv_points, inspect_netcfd_original, terrain_extractor
+netCDF4>=1.6            # nc_inspect (netCDF4-based inspector)
+numpy>=1.24             # everything
+
+# --- Scientific / interpolation ---
+scipy>=1.10             # future: temporal interpolation between timesteps
+
+# --- Visualisation ---
+matplotlib>=3.7         # terrain_extractor (analysis plots)
+
+# --- Image / heightfield export ---
+opencv-python>=4.8      # asc_to_tiff (16-bit TIFF heightmap export)
+
+# --- Terminal output ---
+rich>=13.0              # nc_inspect (pretty tables — optional but nice)
+
+# --- VDB export (DO NOT pip install — use Houdini's hython instead) ---
+# pyopenvdb              # bundled with Houdini H19.5+
+#                        # run:  hython nc_to_vdb.py  to get it for free
+
+# ============================================================
+# One-liner for fresh Windows machine (PowerShell):
+#
+# & "C:\Users\tekan\AppData\Local\Programs\Python\Python312\python.exe" -m pip install xarray netCDF4 numpy scipy rich matplotlib opencv-python
+# ============================================================

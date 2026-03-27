@@ -24,3 +24,13 @@ backup/
 # OS
 .DS_Store
 Thumbs.db
+
+# NumPy intermediate files
+*.npy
+*.raw
+
+# Output data (too large for git)
+wind_points_output/
+wind_bgeo/
+taiwan_terrain*
+*_analysis.png
