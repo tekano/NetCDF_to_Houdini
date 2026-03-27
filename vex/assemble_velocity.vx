@@ -1,0 +1,17 @@
+// assemble_velocity.vx
+// Run over: Points
+// Paste into an Attribute Wrangle after importing CSV via File SOP.
+// Assembles the separate vx/vy/vz float columns into a Houdini velocity vector.
+
+v@v = set(f@vx, f@vy, f@vz);
+
+// Optionally normalise for visualisation (e.g. arrow display)
+// v@v_norm = normalize(v@v);
+
+// Wind speed scalar — useful for colour ramp or CHOP driven effects
+f@speed = length(v@v);
+
+// Remap height AGL to a 0-1 range for shading
+// Adjust max_height to match your data (metres)
+float max_height = 1000.0;
+f@height_norm = clamp(f@height / max_height, 0.0, 1.0);

@@ -1,0 +1,26 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+*.egg-info/
+
+# Data files — too large for git
+*.nc
+*.vdb
+*.csv
+*.tiff
+*.tif
+wind_points_output/
+
+# Houdini
+*.hip
+*.hiplc
+*.hipnc
+*.hda
+*.otl
+backup/
+
+# OS
+.DS_Store
+Thumbs.db

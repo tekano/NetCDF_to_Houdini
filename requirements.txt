@@ -1,0 +1,15 @@
+# Core — required for all scripts
+xarray>=2023.1
+netCDF4>=1.6
+numpy>=1.24
+scipy>=1.10
+
+# Optional — richer terminal output for nc_inspect.py
+rich>=13.0
+
+# Optional — only needed for nc_to_vdb.py (run via hython instead)
+# pyopenvdb  # bundled with Houdini; install separately only if needed
+
+# Optional — GeoTIFF export (future nc_to_tiff.py)
+# rioxarray>=0.14
+# rasterio>=1.3
