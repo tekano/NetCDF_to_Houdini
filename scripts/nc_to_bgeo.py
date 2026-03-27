@@ -59,42 +59,66 @@ except ImportError:
 # ── Time decoding ─────────────────────────────────────────────────────────────
 
 def decode_time_axis(ds):
+    import netCDF4 as nc4
+
     time_var  = ds['time']
-    time_vals = time_var.values.astype(float)
-    units     = getattr(time_var, 'units', '')
+    time_vals = time_var.values  # may be numpy datetime64 or raw floats
 
-    origin_dt  = None
-    multiplier = 1.0  # minutes
+    # ── Try xarray's built-in datetime64 decoding first ──────────────────────
+    # xarray often decodes CF time automatically into numpy datetime64
+    if np.issubdtype(time_vals.dtype, np.datetime64):
+        datetimes = [datetime.utcfromtimestamp(
+                         (t - np.datetime64('1970-01-01T00:00:00')) /
+                         np.timedelta64(1, 's'))
+                     for t in time_vals]
+        interval = ((datetimes[1] - datetimes[0]).total_seconds() / 60.0
+                    if len(datetimes) > 1 else 30.0)
+        units = str(getattr(time_var, 'units', 'decoded by xarray'))
+        print(f"  Time origin : {datetimes[0].strftime('%Y-%m-%d %H:%M')} (xarray decoded)")
+        print(f"  Steps       : {len(datetimes)}  ×  {interval:.0f} min  "
+              f"= {interval*(len(datetimes)-1)/60:.1f} hours")
+        return datetimes, interval, units
 
-    for prefix, mins in [('minutes since', 1.0),
-                          ('hours since',   60.0),
-                          ('seconds since', 1.0/60.0)]:
-        if units.lower().startswith(prefix):
-            multiplier = mins
-            date_str   = units[len(prefix):].strip().split()[0]
-            for fmt in ('%Y-%m-%d', '%Y-%m-%dT%H:%M:%S'):
-                try:
-                    origin_dt = datetime.strptime(date_str, fmt)
-                    break
-                except ValueError:
-                    continue
-            break
+    # ── Fall back: read raw values + units via netCDF4 directly ──────────────
+    try:
+        raw_ds    = nc4.Dataset(ds.encoding.get('source') or
+                                ds.attrs.get('source', ''), 'r')
+        raw_time  = raw_ds.variables['time']
+        raw_vals  = raw_time[:].astype(float)
+        units     = getattr(raw_time, 'units', '')
+        calendar  = getattr(raw_time, 'calendar', 'standard')
+        raw_ds.close()
 
-    if origin_dt is None:
-        print(f"[warn] Could not parse time units: '{units}' — using 2007-10-05 + 30min intervals")
-        origin_dt  = datetime(2007, 10, 5)
-        multiplier = 30.0
+        import cftime
+        cft_dates = cftime.num2date(raw_vals, units=units, calendar=calendar)
+        datetimes = [datetime(d.year, d.month, d.day,
+                              d.hour, d.minute, d.second)
+                     for d in cft_dates]
+    except Exception as e:
+        print(f"[warn] netCDF4 time decode failed ({e}) — "
+              f"inferring 30-min steps from 2007-10-05")
+        n         = len(time_vals)
+        origin_dt = datetime(2007, 10, 5)
+        # raw values are 0,1,2... or 0,30,60... — detect interval
+        raw_f = np.array(time_vals, dtype=float)
+        raw_f = raw_f[np.isfinite(raw_f)]
+        step  = float(raw_f[1] - raw_f[0]) if len(raw_f) > 1 else 30.0
+        # if step looks like minutes (0-60) use directly; else assume index
+        interval_min = step if 1.0 <= step <= 120.0 else 30.0
+        datetimes = [origin_dt + timedelta(minutes=i * interval_min)
+                     for i in range(n)]
+        interval  = interval_min
+        units     = f"inferred {interval_min:.0f}-min steps from 2007-10-05"
+        print(f"  Time origin : {origin_dt.strftime('%Y-%m-%d %H:%M')} (inferred)")
+        print(f"  Steps       : {n}  ×  {interval:.0f} min  "
+              f"= {interval*(n-1)/60:.1f} hours")
+        return datetimes, interval, units
 
-    datetimes = [origin_dt + timedelta(minutes=float(v) * multiplier)
-                 for v in time_vals]
-
-    interval  = ((datetimes[1] - datetimes[0]).total_seconds() / 60.0
-                 if len(datetimes) > 1 else 30.0)
-
-    print(f"  Time origin : {origin_dt.strftime('%Y-%m-%d %H:%M')}")
+    interval = ((datetimes[1] - datetimes[0]).total_seconds() / 60.0
+                if len(datetimes) > 1 else 30.0)
+    print(f"  Time origin : {datetimes[0].strftime('%Y-%m-%d %H:%M')} (netCDF4 decoded)")
     print(f"  Steps       : {len(datetimes)}  ×  {interval:.0f} min  "
           f"= {interval*(len(datetimes)-1)/60:.1f} hours")
-
     return datetimes, interval, units
 
 
